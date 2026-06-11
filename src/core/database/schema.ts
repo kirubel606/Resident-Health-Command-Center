@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Base timestamp columns for all tables.
@@ -9,33 +9,47 @@ export const timestamps = {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 };
 
+export const patientStatusEnum = pgEnum("patient_status", ["waiting", "in-progress", "completed"]);
+export const carePlanStatusEnum = pgEnum("care_plan_status", ["active", "completed", "archived"]);
+
 /**
  * Users table - syncs with Supabase Auth via database trigger.
- *
- * To set up the trigger in Supabase SQL Editor:
- *
- * ```sql
- * -- Function to sync auth.users to public.users
- * CREATE OR REPLACE FUNCTION public.handle_new_user()
- * RETURNS trigger AS $$
- * BEGIN
- *   INSERT INTO public.users (id, email)
- *   VALUES (NEW.id, NEW.email);
- *   RETURN NEW;
- * END;
- * $$ LANGUAGE plpgsql SECURITY DEFINER;
- *
- * -- Trigger on auth.users insert
- * CREATE OR REPLACE TRIGGER on_auth_user_created
- *   AFTER INSERT ON auth.users
- *   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
- * ```
  */
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(), // References auth.users(id)
   email: text("email").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  ...timestamps,
+});
+
+/**
+ * Patients table - core clinical entity.
+ */
+export const patients = pgTable("patients", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  dob: text("dob").notNull(), // ISO date string or similar
+  contact: text("contact").notNull(),
+  insurance: text("insurance"),
+  symptoms: text("symptoms").notNull(),
+  priorityScore: integer("priority_score").notNull().default(0),
+  status: patientStatusEnum("status").notNull().default("waiting"),
+  ...timestamps,
+});
+
+/**
+ * Care plans - clinical tracking for patients.
+ */
+export const carePlans = pgTable("care_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patients.id, { onDelete: "cascade" }),
+  notes: text("notes").notNull(),
+  prescriptions: text("prescriptions"),
+  followUpDate: text("follow_up_date"),
+  status: carePlanStatusEnum("status").notNull().default("active"),
   ...timestamps,
 });
 
