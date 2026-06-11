@@ -53,6 +53,8 @@ export const carePlans = pgTable("care_plans", {
   notes: text("notes").notNull(),
   prescriptions: text("prescriptions"),
   followUpDate: text("follow_up_date"),
+  caretakerName: text("caretaker_name"),
+  attendantName: text("attendant_name"),
   status: carePlanStatusEnum("status").notNull().default("active"),
   ...timestamps,
 });

@@ -77,7 +77,7 @@ export function CarePlanForm({
             <FormItem>
               <FormLabel>Prescriptions</FormLabel>
               <FormControl>
-                <Input placeholder="Medications, dosage, frequency..." {...field} />
+                <Input placeholder="Medication A, Medication B, Dosage..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -92,6 +92,34 @@ export function CarePlanForm({
               <FormLabel>Follow-up Date</FormLabel>
               <FormControl>
                 <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="caretakerName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Caretaker Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter caretaker name..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="attendantName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Attendant Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter attendant name..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
