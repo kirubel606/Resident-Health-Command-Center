@@ -1,69 +1,39 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 
 // Mock user data
 const mockUser = {
   id: "user-123",
   email: "test@example.com",
-  app_metadata: {},
-  user_metadata: {},
-  aud: "authenticated",
-  created_at: "2024-01-01T00:00:00.000Z",
+  role: "staff",
 };
 
-// Mock subscription
-const mockUnsubscribe = mock(() => {});
-const mockSubscription = { unsubscribe: mockUnsubscribe };
-
-// Mock auth state change callback holder
-let authStateChangeCallback:
-  | ((event: string, session: { user: typeof mockUser } | null) => void)
-  | null = null;
-
-// Mock Supabase client
-const mockGetUser = mock(() => Promise.resolve({ data: { user: mockUser }, error: null }));
-const mockOnAuthStateChange = mock((callback: typeof authStateChangeCallback) => {
-  authStateChangeCallback = callback;
-  return { data: { subscription: mockSubscription } };
-});
-
-const mockSupabaseClient = {
-  auth: {
-    getUser: mockGetUser,
-    onAuthStateChange: mockOnAuthStateChange,
-  },
-};
-
-// Mock module
-mock.module("@/core/supabase/client", () => ({
-  createClient: () => mockSupabaseClient,
-}));
+// Mock fetch
+const mockFetch = mock(() =>
+  Promise.resolve({
+    json: () => Promise.resolve({ user: mockUser }),
+  })
+);
+global.fetch = mockFetch as any;
 
 // Import after mocking
 const { useUser } = await import("./hooks");
 
 describe("useUser", () => {
   beforeEach(() => {
-    mockGetUser.mockClear();
-    mockOnAuthStateChange.mockClear();
-    mockUnsubscribe.mockClear();
-    authStateChangeCallback = null;
-
-    // Reset to default implementation
-    mockGetUser.mockImplementation(() =>
-      Promise.resolve({ data: { user: mockUser }, error: null }),
+    mockFetch.mockClear();
+    mockFetch.mockImplementation(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ user: mockUser }),
+      }) as any
     );
-  });
-
-  afterEach(() => {
-    authStateChangeCallback = null;
   });
 
   it("returns loading state initially", () => {
     const { result } = renderHook(() => useUser());
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.user).toBeNull();
+    expect(result.current.user).toBeUndefined();
     expect(result.current.isAuthenticated).toBe(false);
   });
 
@@ -76,11 +46,14 @@ describe("useUser", () => {
 
     expect(result.current.user).toEqual(mockUser);
     expect(result.current.isAuthenticated).toBe(true);
+    expect(mockFetch).toHaveBeenCalledWith("/api/auth/me");
   });
 
   it("returns undefined user when not authenticated", async () => {
-    mockGetUser.mockImplementationOnce(
-      () => Promise.resolve({ data: { user: null }, error: null }) as never,
+    mockFetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ user: null }),
+      }) as any
     );
 
     const { result } = renderHook(() => useUser());
@@ -93,69 +66,16 @@ describe("useUser", () => {
     expect(result.current.isAuthenticated).toBe(false);
   });
 
-  it("subscribes to auth state changes", async () => {
-    const { result } = renderHook(() => useUser());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(mockOnAuthStateChange).toHaveBeenCalled();
-  });
-
-  it("updates user on auth state change (sign in)", async () => {
-    mockGetUser.mockImplementationOnce(
-      () => Promise.resolve({ data: { user: null }, error: null }) as never,
-    );
+  it("handles fetch error gracefully", async () => {
+    mockFetch.mockImplementationOnce(() => Promise.reject(new Error("Network error")));
 
     const { result } = renderHook(() => useUser());
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.user).toBeUndefined();
-
-    // Simulate sign in via auth state change
-    act(() => {
-      if (authStateChangeCallback) {
-        authStateChangeCallback("SIGNED_IN", { user: mockUser });
-      }
-    });
-
-    expect(result.current.user).toEqual(mockUser);
-    expect(result.current.isAuthenticated).toBe(true);
-  });
-
-  it("updates user on auth state change (sign out)", async () => {
-    const { result } = renderHook(() => useUser());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.user).toEqual(mockUser);
-
-    // Simulate sign out via auth state change
-    act(() => {
-      if (authStateChangeCallback) {
-        authStateChangeCallback("SIGNED_OUT", null);
-      }
     });
 
     expect(result.current.user).toBeUndefined();
     expect(result.current.isAuthenticated).toBe(false);
-  });
-
-  it("unsubscribes on unmount", async () => {
-    const { result, unmount } = renderHook(() => useUser());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    unmount();
-
-    expect(mockUnsubscribe).toHaveBeenCalled();
   });
 });

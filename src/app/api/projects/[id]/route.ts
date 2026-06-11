@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { handleApiError, unauthorizedResponse } from "@/core/api/errors";
 import { getLogger } from "@/core/logging";
-import { createClient } from "@/core/supabase/server";
+import { getSessionUser } from "@/features/auth/service";
 import { deleteProject, getProject, UpdateProjectSchema, updateProject } from "@/features/projects";
 
 const logger = getLogger("api.projects");
@@ -14,17 +14,13 @@ interface RouteParams {
 /**
  * GET /api/projects/[id]
  * Get a single project by ID.
- * Returns public projects to anyone, private projects only to owner.
  */
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
+    const user = await getSessionUser();
     const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    logger.info({ projectId: id, userId: user?.id ?? null }, "project.get_started");
+    logger.info({ projectId: id }, "project.get_started");
 
     const project = await getProject(id, user?.id ?? null);
 
@@ -38,28 +34,26 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 /**
  * PATCH /api/projects/[id]
- * Update a project. Only the owner can update.
+ * Update a project.
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getSessionUser();
 
     if (!user) {
       return unauthorizedResponse();
     }
 
+    const { id } = await params;
+
     const body = await request.json();
     const input = UpdateProjectSchema.parse(body);
 
-    logger.info({ projectId: id, userId: user.id }, "project.update_started");
+    logger.info({ projectId: id }, "project.update_started");
 
     const project = await updateProject(id, input, user.id);
 
-    logger.info({ projectId: id, userId: user.id }, "project.update_completed");
+    logger.info({ projectId: id }, "project.update_completed");
 
     return NextResponse.json(project);
   } catch (error) {
@@ -69,25 +63,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/projects/[id]
- * Delete a project. Only the owner can delete.
+ * Delete a project.
  */
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getSessionUser();
 
     if (!user) {
       return unauthorizedResponse();
     }
 
-    logger.info({ projectId: id, userId: user.id }, "project.delete_started");
+    const { id } = await params;
+
+    logger.info({ projectId: id }, "project.delete_started");
 
     await deleteProject(id, user.id);
 
-    logger.info({ projectId: id, userId: user.id }, "project.delete_completed");
+    logger.info({ projectId: id }, "project.delete_completed");
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

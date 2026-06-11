@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { handleApiError, unauthorizedResponse } from "@/core/api/errors";
 import { getLogger } from "@/core/logging";
-import { createClient } from "@/core/supabase/server";
+import { getSessionUser } from "@/features/auth/service";
 import {
   CreateProjectSchema,
   createProject,
@@ -15,14 +15,11 @@ const logger = getLogger("api.projects");
 
 /**
  * GET /api/projects
- * List projects for the authenticated user with pagination.
+ * List projects with pagination.
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getSessionUser();
 
     if (!user) {
       return unauthorizedResponse();
@@ -50,7 +47,7 @@ export async function GET(request: NextRequest) {
       pagination = { page: 1, pageSize: 20 };
     }
 
-    logger.info({ userId: user.id, pagination }, "projects.list_started");
+    logger.info({ pagination }, "projects.list_started");
 
     const [projects, total] = await Promise.all([
       getProjectsByOwner(user.id),
@@ -61,7 +58,7 @@ export async function GET(request: NextRequest) {
     const start = (pagination.page - 1) * pagination.pageSize;
     const paginatedProjects = projects.slice(start, start + pagination.pageSize);
 
-    logger.info({ userId: user.id, count: paginatedProjects.length }, "projects.list_completed");
+    logger.info({ count: paginatedProjects.length }, "projects.list_completed");
 
     return NextResponse.json(createPaginatedResponse(paginatedProjects, total, pagination));
   } catch (error) {
@@ -71,14 +68,11 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/projects
- * Create a new project for the authenticated user.
+ * Create a new project.
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getSessionUser();
 
     if (!user) {
       return unauthorizedResponse();
@@ -87,11 +81,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const input = CreateProjectSchema.parse(body);
 
-    logger.info({ userId: user.id, name: input.name }, "projects.create_started");
+    logger.info({ name: input.name }, "projects.create_started");
 
     const project = await createProject(input, user.id);
 
-    logger.info({ userId: user.id, projectId: project.id }, "projects.create_completed");
+    logger.info({ projectId: project.id }, "projects.create_completed");
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

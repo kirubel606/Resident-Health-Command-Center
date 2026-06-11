@@ -11,13 +11,16 @@ export const timestamps = {
 
 export const patientStatusEnum = pgEnum("patient_status", ["waiting", "in-progress", "completed"]);
 export const carePlanStatusEnum = pgEnum("care_plan_status", ["active", "completed", "archived"]);
+export const userRoleEnum = pgEnum("user_role", ["staff", "nurse"]);
 
 /**
- * Users table - syncs with Supabase Auth via database trigger.
+ * Users table for local authentication.
  */
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey(), // References auth.users(id)
-  email: text("email").notNull(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  role: userRoleEnum("role").notNull().default("staff"),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
   ...timestamps,
@@ -25,9 +28,10 @@ export const users = pgTable("users", {
 
 /**
  * Patients table - core clinical entity.
+ * ID format: PT-{YYYYMMDD}-{3-digit-hash}
  */
 export const patients = pgTable("patients", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey(),
   name: text("name").notNull(),
   dob: text("dob").notNull(), // ISO date string or similar
   contact: text("contact").notNull(),
@@ -43,7 +47,7 @@ export const patients = pgTable("patients", {
  */
 export const carePlans = pgTable("care_plans", {
   id: uuid("id").primaryKey().defaultRandom(),
-  patientId: uuid("patient_id")
+  patientId: text("patient_id")
     .notNull()
     .references(() => patients.id, { onDelete: "cascade" }),
   notes: text("notes").notNull(),

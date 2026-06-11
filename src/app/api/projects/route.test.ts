@@ -17,17 +17,23 @@ const mockProject: Project = {
   updatedAt: new Date("2024-01-01"),
 };
 
-// Mock Supabase auth
-const mockGetUser = mock<() => Promise<{ data: { user: MockUser }; error: null }>>(() =>
-  Promise.resolve({ data: { user: mockUser }, error: null }),
+// Mock Auth Service
+const mockGetSessionUser = mock<() => Promise<MockUser>>(() =>
+  Promise.resolve(mockUser),
 );
-mock.module("@/core/supabase/server", () => ({
-  createClient: () =>
-    Promise.resolve({
-      auth: {
-        getUser: mockGetUser,
-      },
-    }),
+mock.module("@/features/auth/service", () => ({
+  getSessionUser: mockGetSessionUser,
+  hashPassword: mock(() => "hashed"),
+  verifyPassword: mock(() => true),
+  registerUser: mock(() => Promise.resolve({})),
+  verifyUser: mock(() => Promise.resolve({})),
+  createSession: mock(() => Promise.resolve()),
+  destroySession: mock(() => Promise.resolve()),
+}));
+
+// Mock Database
+mock.module("@/core/database/client", () => ({
+  db: {},
 }));
 
 // Mock repository (the database layer)
@@ -52,7 +58,7 @@ const { GET, POST } = await import("./route");
 
 describe("GET /api/projects", () => {
   beforeEach(() => {
-    mockGetUser.mockClear();
+    mockGetSessionUser.mockClear();
     mockFindByOwnerId.mockClear();
     mockCountByOwnerId.mockClear();
   });
@@ -70,7 +76,7 @@ describe("GET /api/projects", () => {
   });
 
   it("returns 401 for unauthenticated user", async () => {
-    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    mockGetSessionUser.mockResolvedValueOnce(null);
 
     const request = new NextRequest("http://localhost:3000/api/projects");
     const response = await GET(request);
@@ -93,7 +99,7 @@ describe("GET /api/projects", () => {
 
 describe("POST /api/projects", () => {
   beforeEach(() => {
-    mockGetUser.mockClear();
+    mockGetSessionUser.mockClear();
     mockCreate.mockClear();
     mockFindBySlug.mockClear();
   });
@@ -113,7 +119,7 @@ describe("POST /api/projects", () => {
   });
 
   it("returns 401 for unauthenticated user", async () => {
-    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
+    mockGetSessionUser.mockResolvedValueOnce(null);
 
     const request = new NextRequest("http://localhost:3000/api/projects", {
       method: "POST",

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/core/supabase/server";
+import { registerUser, createSession } from "@/features/auth/service";
 
 export interface RegisterState {
   error?: string;
@@ -14,11 +14,10 @@ export async function register(
   _prevState: RegisterState,
   formData: FormData,
 ): Promise<RegisterState> {
-  const supabase = await createClient();
-
   const email = formData.get("email");
   const password = formData.get("password");
   const confirmPassword = formData.get("confirmPassword");
+  const role = (formData.get("role") as "staff" | "nurse") || "staff";
 
   if (
     typeof email !== "string" ||
@@ -40,23 +39,14 @@ export async function register(
     return { error: "Password must be at least 6 characters" };
   }
 
-  const { error, data } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (error) {
-    return { error: error.message };
+  try {
+    const user = await registerUser(email, password, role);
+    await createSession(user.id);
+  } catch (error) {
+    // Log the actual error for developers, but show a friendly message to the user
+    console.error("Registration error:", error);
+    return { error: "An error occurred during registration. Please check your details and try again." };
   }
 
-  // Check if email confirmation is required
-  if (data.user && !data.session) {
-    return {
-      success: true,
-      message: "Check your email for a confirmation link.",
-    };
-  }
-
-  // If session exists, user is confirmed (email confirmation disabled)
   redirect("/dashboard");
 }

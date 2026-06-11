@@ -2,15 +2,13 @@
 
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/core/supabase/server";
+import { verifyUser, createSession } from "@/features/auth/service";
 
 export interface LoginState {
   error?: string;
 }
 
 export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
-  const supabase = await createClient();
-
   const email = formData.get("email");
   const password = formData.get("password");
 
@@ -22,13 +20,16 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     return { error: "Email and password are required" };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    const user = await verifyUser(email, password);
 
-  if (error) {
-    return { error: error.message };
+    if (!user) {
+      return { error: "Invalid credentials" };
+    }
+
+    await createSession(user.id);
+  } catch (error) {
+    return { error: "An authentication error occurred. Please try again later." };
   }
 
   redirect("/dashboard");

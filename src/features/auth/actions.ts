@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { getLogger } from "@/core/logging";
-import { createClient } from "@/core/supabase/server";
+import { destroySession } from "@/features/auth/service";
 
 const logger = getLogger("auth.actions");
 
@@ -11,19 +11,8 @@ const logger = getLogger("auth.actions");
  * Sign out the current user and redirect to login.
  */
 export async function signOut(): Promise<void> {
-  const supabase = await createClient();
+  await destroySession();
 
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      logger.warn({ error: error.message }, "auth.signout_failed");
-    } else {
-      logger.info("auth.signout_completed");
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error({ error: message }, "auth.signout_error");
-  }
-
+  logger.info("auth.signout_completed");
   redirect("/login");
 }

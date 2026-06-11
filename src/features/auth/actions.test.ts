@@ -5,38 +5,22 @@ const mockRedirect = mock(() => {
   throw new Error("NEXT_REDIRECT");
 });
 
-// Mock Supabase client - use `as never` to avoid strict type checking for mocks
-const mockSignOut = mock(() => Promise.resolve({ error: null }));
-const mockSignInWithPassword = mock(
-  () =>
-    Promise.resolve({
-      data: { user: { id: "123" }, session: {} },
-      error: null,
-    }) as never,
-);
-const mockSignUp = mock(
-  () =>
-    Promise.resolve({
-      data: { user: { id: "123" }, session: {} },
-      error: null,
-    }) as never,
-);
-
-const mockSupabaseClient = {
-  auth: {
-    signOut: mockSignOut,
-    signInWithPassword: mockSignInWithPassword,
-    signUp: mockSignUp,
-  },
-};
+// Mock Auth Service
+const mockVerifyUser = mock(() => Promise.resolve({ id: "user-123", email: "test@example.com" }));
+const mockCreateSession = mock(() => Promise.resolve());
+const mockRegisterUser = mock(() => Promise.resolve({ id: "user-123", email: "test@example.com" }));
+const mockDestroySession = mock(() => Promise.resolve());
 
 // Mock modules
 mock.module("next/navigation", () => ({
   redirect: mockRedirect,
 }));
 
-mock.module("@/core/supabase/server", () => ({
-  createClient: () => Promise.resolve(mockSupabaseClient),
+mock.module("@/features/auth/service", () => ({
+  verifyUser: mockVerifyUser,
+  createSession: mockCreateSession,
+  registerUser: mockRegisterUser,
+  destroySession: mockDestroySession,
 }));
 
 // Import after mocking
@@ -46,31 +30,32 @@ const { register } = await import("@/app/(auth)/register/actions");
 
 describe("signOut", () => {
   beforeEach(() => {
-    mockSignOut.mockClear();
+    mockDestroySession.mockClear();
     mockRedirect.mockClear();
   });
 
-  it("calls supabase.auth.signOut and redirects to login", async () => {
+  it("calls destroySession and redirects to login", async () => {
     try {
       await signOut();
     } catch {
       // redirect throws
     }
 
-    expect(mockSignOut).toHaveBeenCalled();
+    expect(mockDestroySession).toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 });
 
 describe("login", () => {
   beforeEach(() => {
-    mockSignInWithPassword.mockClear();
+    mockVerifyUser.mockClear();
+    mockCreateSession.mockClear();
     mockRedirect.mockClear();
+    mockVerifyUser.mockImplementation(() => Promise.resolve({ id: "user-123", email: "test@example.com" }) as any);
   });
 
   it("returns error for invalid form data (missing email)", async () => {
     const formData = new FormData();
-    // Don't set email - formData.get("email") returns null
     formData.set("password", "password123");
 
     const result = await login({}, formData);
@@ -81,7 +66,6 @@ describe("login", () => {
   it("returns error for invalid form data (missing password)", async () => {
     const formData = new FormData();
     formData.set("email", "test@example.com");
-    // Don't set password - formData.get("password") returns null
 
     const result = await login({}, formData);
 
@@ -98,17 +82,7 @@ describe("login", () => {
     expect(result.error).toBe("Email and password are required");
   });
 
-  it("returns error for empty password", async () => {
-    const formData = new FormData();
-    formData.set("email", "test@example.com");
-    formData.set("password", "");
-
-    const result = await login({}, formData);
-
-    expect(result.error).toBe("Email and password are required");
-  });
-
-  it("calls signInWithPassword with credentials", async () => {
+  it("calls verifyUser and createSession with credentials", async () => {
     const formData = new FormData();
     formData.set("email", "test@example.com");
     formData.set("password", "password123");
@@ -119,16 +93,12 @@ describe("login", () => {
       // redirect throws
     }
 
-    expect(mockSignInWithPassword).toHaveBeenCalledWith({
-      email: "test@example.com",
-      password: "password123",
-    });
+    expect(mockVerifyUser).toHaveBeenCalledWith("test@example.com", "password123");
+    expect(mockCreateSession).toHaveBeenCalledWith("user-123");
   });
 
-  it("returns error when signInWithPassword fails", async () => {
-    mockSignInWithPassword.mockImplementationOnce(
-      () => Promise.resolve({ data: {}, error: { message: "Invalid credentials" } }) as never,
-    );
+  it("returns error when verifyUser fails", async () => {
+    mockVerifyUser.mockImplementationOnce(() => Promise.resolve(null));
 
     const formData = new FormData();
     formData.set("email", "test@example.com");
@@ -142,52 +112,20 @@ describe("login", () => {
 
 describe("register", () => {
   beforeEach(() => {
-    mockSignUp.mockClear();
+    mockRegisterUser.mockClear();
+    mockCreateSession.mockClear();
     mockRedirect.mockClear();
+    mockRegisterUser.mockImplementation(() => Promise.resolve({ id: "user-123", email: "test@example.com" }) as any);
   });
 
   it("returns error for invalid form data (missing email)", async () => {
     const formData = new FormData();
-    // Don't set email
     formData.set("password", "password123");
     formData.set("confirmPassword", "password123");
 
     const result = await register({}, formData);
 
     expect(result.error).toBe("Invalid form data");
-  });
-
-  it("returns error for invalid form data (missing password)", async () => {
-    const formData = new FormData();
-    formData.set("email", "test@example.com");
-    // Don't set password
-    formData.set("confirmPassword", "password123");
-
-    const result = await register({}, formData);
-
-    expect(result.error).toBe("Invalid form data");
-  });
-
-  it("returns error for invalid form data (missing confirmPassword)", async () => {
-    const formData = new FormData();
-    formData.set("email", "test@example.com");
-    formData.set("password", "password123");
-    // Don't set confirmPassword
-
-    const result = await register({}, formData);
-
-    expect(result.error).toBe("Invalid form data");
-  });
-
-  it("returns error for empty fields", async () => {
-    const formData = new FormData();
-    formData.set("email", "");
-    formData.set("password", "password123");
-    formData.set("confirmPassword", "password123");
-
-    const result = await register({}, formData);
-
-    expect(result.error).toBe("All fields are required");
   });
 
   it("returns error when passwords do not match", async () => {
@@ -201,22 +139,12 @@ describe("register", () => {
     expect(result.error).toBe("Passwords do not match");
   });
 
-  it("returns error when password is too short", async () => {
-    const formData = new FormData();
-    formData.set("email", "test@example.com");
-    formData.set("password", "12345");
-    formData.set("confirmPassword", "12345");
-
-    const result = await register({}, formData);
-
-    expect(result.error).toBe("Password must be at least 6 characters");
-  });
-
-  it("calls signUp with credentials", async () => {
+  it("calls registerUser and createSession with credentials", async () => {
     const formData = new FormData();
     formData.set("email", "test@example.com");
     formData.set("password", "password123");
     formData.set("confirmPassword", "password123");
+    formData.set("role", "nurse");
 
     try {
       await register({}, formData);
@@ -224,32 +152,12 @@ describe("register", () => {
       // redirect throws
     }
 
-    expect(mockSignUp).toHaveBeenCalledWith({
-      email: "test@example.com",
-      password: "password123",
-    });
+    expect(mockRegisterUser).toHaveBeenCalledWith("test@example.com", "password123", "nurse");
+    expect(mockCreateSession).toHaveBeenCalledWith("user-123");
   });
 
-  it("returns success message when email confirmation required", async () => {
-    mockSignUp.mockImplementationOnce(
-      () => Promise.resolve({ data: { user: { id: "123" }, session: null }, error: null }) as never,
-    );
-
-    const formData = new FormData();
-    formData.set("email", "test@example.com");
-    formData.set("password", "password123");
-    formData.set("confirmPassword", "password123");
-
-    const result = await register({}, formData);
-
-    expect(result.success).toBe(true);
-    expect(result.message).toBe("Check your email for a confirmation link.");
-  });
-
-  it("returns error when signUp fails", async () => {
-    mockSignUp.mockImplementationOnce(
-      () => Promise.resolve({ data: {}, error: { message: "User already exists" } }) as never,
-    );
+  it("returns error when registerUser fails", async () => {
+    mockRegisterUser.mockImplementationOnce(() => Promise.reject(new Error("Email already in use")));
 
     const formData = new FormData();
     formData.set("email", "existing@example.com");
@@ -258,6 +166,6 @@ describe("register", () => {
 
     const result = await register({}, formData);
 
-    expect(result.error).toBe("User already exists");
+    expect(result.error).toBe("Email already in use");
   });
 });

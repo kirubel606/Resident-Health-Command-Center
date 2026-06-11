@@ -8,6 +8,25 @@ import { CreatePatientSchema, UpdatePatientSchema } from "./schemas";
 
 const logger = getLogger("patients.service");
 
+/**
+ * Generate a patient ID in the format: PT-{YYYYMMDD}-{3-digit-hash}
+ */
+function generatePatientId(name: string): string {
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
+  
+  // Simple 3-digit hash using name and current time
+  const hashInput = `${name}${now.getTime()}`;
+  let hash = 0;
+  for (let i = 0; i < hashInput.length; i++) {
+    hash = (hash << 5) - hash + hashInput.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hashStr = Math.abs(hash).toString(36).substring(0, 3).toUpperCase();
+  
+  return `PT-${dateStr}-${hashStr}`;
+}
+
 export async function createPatient(input: CreatePatientInput): Promise<Patient> {
   const validated = CreatePatientSchema.parse(input);
 
@@ -15,9 +34,11 @@ export async function createPatient(input: CreatePatientInput): Promise<Patient>
 
   try {
     const priorityScore = await computePriority(validated.symptoms);
+    const id = generatePatientId(validated.name);
 
     const patient = await repository.create({
       ...validated,
+      id,
       priorityScore,
       status: "waiting",
     });

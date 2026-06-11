@@ -1,13 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/core/supabase/server";
+import { getSessionUser } from "@/features/auth/service";
 import { PatientRegistrationForm } from "@/features/patients/components/PatientRegistrationForm";
 import { QueueTable } from "@/features/queue/components/QueueTable";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   return (
     <div className="flex flex-col gap-6">

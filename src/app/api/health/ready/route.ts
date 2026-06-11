@@ -9,7 +9,7 @@ const logger = getLogger("health.ready");
 
 interface CheckResult {
   database: "connected" | "disconnected";
-  auth: "configured" | "missing";
+  auth: "configured" | "unconfigured";
 }
 
 /**
@@ -21,7 +21,7 @@ export async function GET() {
 
   const checks: CheckResult = {
     database: "disconnected",
-    auth: "missing",
+    auth: "unconfigured",
   };
   let allHealthy = true;
 
@@ -35,11 +35,10 @@ export async function GET() {
     allHealthy = false;
   }
 
-  // Check auth configuration
+  // Check Supabase configuration
   if (env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     checks.auth = "configured";
   } else {
-    logger.warn("health.ready_auth_config_missing");
     allHealthy = false;
   }
 
