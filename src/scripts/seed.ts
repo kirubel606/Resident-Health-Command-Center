@@ -1,6 +1,6 @@
-import { db } from "@/core/database/client";
-import { users, patients } from "@/core/database/schema";
-import { hashPassword } from "@/features/auth/service";
+import { db } from "../core/database/client";
+import { users, patients } from "../core/database/schema";
+import { hashPassword } from "../features/auth/service";
 
 async function seed() {
   console.log("Seeding database (skipping existing records)...");

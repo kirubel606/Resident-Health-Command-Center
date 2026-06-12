@@ -40,6 +40,11 @@ ENV PORT=3000
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/src/scripts ./src/scripts
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+
+RUN chmod +x /app/scripts/entrypoint.sh
 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
@@ -48,4 +53,5 @@ USER nextjs
 
 EXPOSE 3000
 
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]
 CMD ["node", "server.js"]
