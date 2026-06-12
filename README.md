@@ -1,47 +1,33 @@
 # Resident Health Command Center
 
-Built during the Dynamous Agentic Engineering Workshop.
+A lightweight, AI-powered clinical dashboard for community health clinics, designed for efficient patient intake, triage, and care tracking.
 
-## What It Does
-A lightweight clinical dashboard for community health clinics. Staff register patients,
-view a prioritized intake queue, and track care plans. AI-assisted triage helps nurses
-identify urgent cases without manual review.
-
-## Live Demo
-[Link to deployed app or screen recording]
+## Key Capabilities
+- **AI-Assisted Patient Triage**: Automatically assigns urgency scores (1-10) to incoming patients based on symptom analysis using local Ollama models (default `llama3.1:8b`).
+- **Automated Email Reminders**: Seamless patient appointment reminders integrated via Nodemailer (with Mailpit support for local development).
+- **Prioritized Queue Management**: Dynamic intake queue with real-time searching, status filtering, and AI-suggested urgency ranking.
+- **Clinical Care Planning**: Integrated care plan generation and management directly from the dashboard.
+- **Analytics Dashboard**: Visual overview of patient flow and triage distribution.
+- **Robust Feature Gating**: Fine-grained control over AI and email features via runtime environment variables.
 
 ## Tech Stack
-- Next.js 15 + React + TypeScript
-- Tailwind CSS
-- SQL.js (SQLite in-memory)
-- Zod runtime validation
-- TanStack Query
+- **Framework**: Next.js 15 + React + TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL (via Drizzle ORM)
+- **AI/ML**: Local Ollama (e.g., `llama3.1:8b`)
+- **Backend/API**: Next.js API Routes (App Router)
+- **Utilities**: Zod (validation), Nodemailer (email), Pino (structured logging)
 
-## How I Used AI (Agentic Workflow)
-1. **PRD Review**: AI reviewed the PRD for gaps before any code was written
-2. **PIV Loop**: Every feature followed Plan → Implement → Validate
-3. **Structured Context**: CLAUDE.md drove consistent AI output across sessions
-4. **Feature Flags**: `ai-triage`, `email-reminders`, `care-plan-v2` enabled safe deployment
-5. **Custom Skills**: Built reusable `/plan-feature` skill for repeated workflows
-
-## Architecture Decisions
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for full decision log.
-
-## Feature Flags
-- `ai-triage`: Enables AI-assisted urgency scoring in queue
-- `email-reminders`: Shows reminder UI (backend stubbed for future integration)
-- `care-plan-v2`: Toggles enhanced care plan interface
-
-## Key Files
-- `CLAUDE.md` — Global rules and coding standards
-- `PRD.md` — Product requirements
-- `ARCHITECTURE.md` — Decision log
-- `src/app/` — Next.js app router
-- `src/components/` — React components
-- `server/src/` — Express API with SQL.js
+## Agentic Implementation
+- **Plan → Act → Validate**: Every feature implemented through a rigorous agentic loop with automated verification.
+- **Local AI Triage**: Clinical reasoning performed locally, ensuring patient data privacy.
+- **Feature Flags**: Safely gated capabilities (`aiTriage`, `emailReminders`) to ensure system stability.
 
 ## Getting Started
-```bash
-npm install
-npm run dev
+Ensure you have Docker running (for PostgreSQL and Mailpit) and Ollama installed.
+
+1. **Environment Setup**: Copy `.env.example` to `.env` and fill in necessary configuration.
+2. **Install**: `bun install`
+3. **Database**: `docker compose up -d`
+4. **Develop**: `bun run dev`
 # App runs at http://localhost:3000
