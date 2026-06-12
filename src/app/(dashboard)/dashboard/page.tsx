@@ -2,9 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getSessionUser } from "@/features/auth/service";
 import { PatientRegistrationForm } from "@/features/patients/components/PatientRegistrationForm";
 import { QueueTable } from "@/features/queue/components/QueueTable";
+import { PatientStatusChart } from "@/features/queue/components/PatientStatusChart";
+import { getAllPatients } from "@/features/patients";
 
 export default async function DashboardPage() {
   const user = await getSessionUser();
+  const patients = await getAllPatients();
 
   return (
     <div className="flex flex-col gap-6">
@@ -14,6 +17,8 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <PatientStatusChart patients={patients} />
+        
         <Card>
           <CardHeader>
             <CardTitle>Patient Registration</CardTitle>

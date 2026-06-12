@@ -41,6 +41,7 @@ export async function createPatient(input: CreatePatientInput): Promise<Patient>
       id,
       priorityScore,
       status: "waiting",
+      // email and appointmentTime are included in ...validated
     });
 
     logger.info({ patientId: patient.id, priorityScore }, "patient.create_completed");

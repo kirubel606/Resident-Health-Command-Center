@@ -90,13 +90,13 @@ A lightweight full-stack clinical operations dashboard that includes:
 
 **Backend**
 
-* Node.js (Express or Fastify)
-* SQLite or SQL.js (lightweight local DB)
+* Next.js (Express or Fastify)
+* Postgresql (local DB)
 * Zod for validation
 
 **Frontend**
 
-* React (Vite)
+* Next.js (Vite)
 * Tailwind CSS
 * TanStack Query for server state
 

@@ -24,6 +24,8 @@ export function PatientRegistrationForm({ onSuccess }: { onSuccess?: () => void 
       dob: "",
       contact: "",
       insurance: "",
+      email: "",
+      appointmentTime: "",
       symptoms: "",
     },
   });
@@ -101,6 +103,34 @@ export function PatientRegistrationForm({ onSuccess }: { onSuccess?: () => void 
               <FormLabel>Insurance (Optional)</FormLabel>
               <FormControl>
                 <Input placeholder="Policy Number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email (Optional)</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="email@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="appointmentTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Appointment Time (Optional)</FormLabel>
+              <FormControl>
+                <Input type="datetime-local" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -20,13 +20,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { CarePlanForm } from "@/features/care-plans/components/CarePlanForm";
 import type { Patient } from "@/features/patients";
+import { flags } from "@/core/config/flags";
 
 export function QueueTable() {
   const [queue, setQueue] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [reminding, setReminding] = useState<Record<string, boolean>>({});
+  const [isCarePlanOpen, setIsCarePlanOpen] = useState(false);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -44,7 +49,9 @@ export function QueueTable() {
   }, []);
 
   const filteredQueue = queue.filter(
-    (patient) => statusFilter === "all" || patient.status === statusFilter
+    (patient) => 
+      (statusFilter === "all" || patient.status === statusFilter) &&
+      (patient.name.toLowerCase().includes(search.toLowerCase()) || patient.symptoms.toLowerCase().includes(search.toLowerCase()))
   ).sort((a, b) => b.priorityScore - a.priorityScore);
 
   useEffect(() => {
@@ -70,6 +77,25 @@ export function QueueTable() {
     }
   }
 
+  async function handleRemind(id: string) {
+    setReminding((prev) => ({ ...prev, [id]: true }));
+    try {
+      const response = await fetch(`/api/patients/${id}/remind`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send reminder");
+      }
+
+      toast.success("Reminder sent");
+    } catch (_error) {
+      toast.error("Error sending reminder");
+    } finally {
+      setReminding((prev) => ({ ...prev, [id]: false }));
+    }
+  }
+
   if (loading) {
     return <div className="p-4 text-center">Loading queue...</div>;
   }
@@ -80,6 +106,12 @@ export function QueueTable() {
         <Button variant={statusFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("all")}>All</Button>
         <Button variant={statusFilter === "waiting" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("waiting")}>Waiting</Button>
         <Button variant={statusFilter === "in-progress" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("in-progress")}>In Progress</Button>
+        <Input 
+            placeholder="Search patients or symptoms..." 
+            className="max-w-xs" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
       <div className="rounded-md border">
         <Table>
@@ -131,7 +163,7 @@ export function QueueTable() {
                   <TableCell className="max-w-[150px] truncate text-xs">{patient.symptoms}</TableCell>
                   <TableCell className="text-right space-x-2">
                     {patient.status === "in-progress" && (
-                      <Dialog>
+                      <Dialog open={isCarePlanOpen} onOpenChange={setIsCarePlanOpen}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm">
                             Care Plan
@@ -144,9 +176,14 @@ export function QueueTable() {
                               Record clinical notes and prescriptions.
                             </DialogDescription>
                           </DialogHeader>
-                          <CarePlanForm patientId={patient.id} />
+                          <CarePlanForm patientId={patient.id} onSuccess={() => setIsCarePlanOpen(false)} />
                         </DialogContent>
                       </Dialog>
+                    )}
+                    {flags.emailReminders && (
+                      <Button size="sm" variant="outline" onClick={() => handleRemind(patient.id)} disabled={reminding[patient.id]}>
+                        {reminding[patient.id] ? "Sending..." : "Remind"}
+                      </Button>
                     )}
                     <Button size="sm" onClick={() => handleAdvance(patient.id)}>
                       {patient.status === "waiting" ? "Start" : "Complete"}

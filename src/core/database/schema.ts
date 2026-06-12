@@ -36,6 +36,8 @@ export const patients = pgTable("patients", {
   dob: text("dob").notNull(), // ISO date string or similar
   contact: text("contact").notNull(),
   insurance: text("insurance"),
+  email: text("email"), // New column
+  appointmentTime: text("appointment_time"), // New column
   symptoms: text("symptoms").notNull(),
   priorityScore: integer("priority_score").notNull().default(0),
   status: patientStatusEnum("status").notNull().default("waiting"),

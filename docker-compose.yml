@@ -36,6 +36,8 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/rhcc
+      - SMTP_HOST=rhcc-mailpit
+      - SMTP_PORT=1025
     depends_on:
       - db
     networks:

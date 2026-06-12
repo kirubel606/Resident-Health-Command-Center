@@ -18,6 +18,17 @@ export const env = {
 
   // Database config (required)
   DATABASE_URL: getRequiredEnv("DATABASE_URL"),
+
+  // Ollama
+  OLLAMA_BASE_URL: getOptionalEnv("OLLAMA_BASE_URL", "http://localhost:11434"),
+  OLLAMA_MODEL: getOptionalEnv("OLLAMA_MODEL", "llama3.1:8b"),
+
+  // SMTP
+  SMTP_HOST: getOptionalEnv("SMTP_HOST", "rhcc-mailpit"),
+  SMTP_PORT: getOptionalEnv("SMTP_PORT", "1025"),
+  SMTP_USER: getOptionalEnv("SMTP_USER", ""),
+  SMTP_PASS: getOptionalEnv("SMTP_PASS", ""),
+  SMTP_FROM: getOptionalEnv("SMTP_FROM", "noreply@clinic.local"),
 } as const;
 
 export type Env = typeof env;

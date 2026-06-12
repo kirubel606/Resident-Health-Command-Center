@@ -5,6 +5,8 @@ export const CreatePatientSchema = z.object({
   dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   contact: z.string().min(1, "Contact information is required"),
   insurance: z.string().optional(),
+  email: z.string().email("Invalid email address").optional(),
+  appointmentTime: z.string().optional(),
   symptoms: z.string().min(1, "Symptoms are required"),
 });
 
